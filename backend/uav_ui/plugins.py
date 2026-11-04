@@ -112,6 +112,8 @@ class PluginStore:
         return plugin
 
     def _directories(self):
+        # Someone may clear the data folder while the app runs.
+        self.install_dir.mkdir(parents=True, exist_ok=True)
         for path in sorted(self.install_dir.iterdir()):
             if path.is_dir():
                 yield path, "uploaded"
@@ -213,6 +215,7 @@ class PluginStore:
         for key, value in values.items():
             _check_config_value(key, value, specs[key])
         merged = {**self.config_values(plugin), **values}
+        self.config_dir.mkdir(parents=True, exist_ok=True)
         path = self.config_dir / f"{plugin['id']}.json"
         path.write_text(json.dumps(merged, indent=2, ensure_ascii=False), encoding="utf-8")
         return merged

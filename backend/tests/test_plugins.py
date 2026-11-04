@@ -29,6 +29,19 @@ def test_install_and_remove(store):
     assert store.get("demo") is None
 
 
+def test_data_folder_cleared_while_running(store):
+    import shutil
+
+    store.install_zip(make_zip({"plugin.yaml": MINIMAL}))
+    shutil.rmtree(store.install_dir)
+    shutil.rmtree(store.config_dir)
+    assert store.list() == ({}, [])
+    assert store.install_zip(make_zip({"plugin.yaml": MINIMAL}))["id"] == "demo"
+    plugin = store.get("demo")
+    assert store.config_values(plugin) == {}
+    assert store.save_config(plugin, {}) == {}
+
+
 def test_zip_with_one_wrapping_folder(store):
     assert store.install_zip(make_zip({"demo-1.0/plugin.yaml": MINIMAL}))["id"] == "demo"
 
