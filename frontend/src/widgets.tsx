@@ -236,7 +236,7 @@ function CommandForm({ plugin, widget }: { plugin: Plugin; widget: WidgetSpec })
         disabled={busy || missing.length > 0 || unavailable !== undefined}
         title={unavailable ?? (missing.length ? `Uzupełnij: ${missing.join(", ")}` : undefined)}
       >
-        Wyślij
+        {widget.submit_label ?? "Wyślij"}
       </button>
       {unavailable && <div className="result bad">Niedostępne: {unavailable}</div>}
       <ResultLine result={result} />

@@ -153,7 +153,7 @@ ui:
     - {id: route, kind: path, label: Ścieżka, command: send_route}
 ```
 
-- **`button`** wysyła od razu, z ustalonymi `args`. **`form`** pokazuje pola.
+- **`button`** wysyła od razu, z ustalonymi `args`. **`form`** pokazuje pola, a `submit_label` zmienia napis „Wyślij” na przycisku.
 - **`map_tools`:** komenda dostaje `lat`, `lon` i `alt`, jeśli je deklaruje (`kind: point`), albo `points` (`kind: path`). Pozostałe jej argumenty GUI pokazuje jako pola obok przycisku, a narzędzi jednego rodzaju może być kilka. `load_layer` dodaje przycisk, który wczytuje ścieżkę z tej warstwy do edycji. Zapis lokalny działa też bez komendy.
 - **Serwis:** gdy odpowiedź ma pole `success`, GUI pokazuje jego wartość i `message`, więc odmowa wygląda jak odmowa.
 - **Panel własny:** patrz [custom-panel-api.md](custom-panel-api.md).

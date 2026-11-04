@@ -119,6 +119,43 @@ def test_command_without_connection_is_reported(client):
     assert response.json()["status"] == "no_bridge"
 
 
+class _FakeBridge:
+    online = True
+
+    def __init__(self, reply):
+        self.reply = reply
+
+    async def run_command(self, _name, _args):
+        return self.reply
+
+    def status(self):
+        return {"url": "fake", "online": True, "error": None, "bytes_per_s": 0, "info": None}
+
+    async def stop(self):
+        pass
+
+
+def _last_event(client):
+    return list(client.app.state.session.events)[-1]
+
+
+def test_refusal_from_a_service_is_logged_as_a_refusal(client):
+    client.app.state.session.bridge = _FakeBridge(
+        {"status": "ok", "result": {"success": False, "message": "misja trwa"}}
+    )
+    response = client.post("/api/plugins/example/commands/add", json={"args": {"a": 1, "b": 2}})
+    assert response.json()["result"]["success"] is False
+    event = _last_event(client)
+    assert event["level"] == "warn" and event["text"].endswith("odmowa")
+
+
+def test_success_from_a_service_is_logged_as_ok(client):
+    client.app.state.session.bridge = _FakeBridge({"status": "ok", "result": {"sum": 3}})
+    client.post("/api/plugins/example/commands/add", json={"args": {"a": 1, "b": 2}})
+    event = _last_event(client)
+    assert event["level"] == "info" and event["text"].endswith("ok")
+
+
 def test_unknown_command_and_plugin(client):
     assert client.post("/api/plugins/example/commands/nope", json={}).status_code == 404
     assert client.post("/api/plugins/nope/commands/x", json={}).status_code == 404

@@ -7,9 +7,10 @@ import type { CommandResult, Telemetry } from "./types";
 const MISSION_WARNING =
   "Misja na dronie nie wie o tej komendzie i może wydać własną komendę lotu, która ją nadpisze. Obserwuj tryb na górze ekranu. Żeby polecieć ponownie, może być potrzebny restart misji.";
 
-// Seen in simulation: RTL from the ground left the vehicle armed for over a minute, Land disarmed it.
+// Seen in simulation: RTL or Hold right after take-off left the vehicle armed on the ground for over a
+// minute, while Land disarmed it.
 const NEAR_GROUND_M = 1;
-const NEAR_GROUND_WARNING = " Dron jest przy ziemi: Land rozbroi go pewniej niż RTL.";
+const NEAR_GROUND_WARNING = " Dron jest przy ziemi: tylko Land go rozbroi.";
 
 const COMMANDS = [
   { id: "hold", label: "Hold", title: "Zawisnąć w miejscu?", text: "Dron przejdzie w tryb HOLD i zawiśnie." },
@@ -106,7 +107,7 @@ export function FlightStrip({ onOpenConnection, menu }: { onOpenConnection: () =
 
   const run = async (command: (typeof COMMANDS)[number]) => {
     const nearGround =
-      command.id === "rtl" && telemetry?.rel_alt !== null && telemetry?.rel_alt !== undefined
+      command.id !== "land" && telemetry?.rel_alt !== null && telemetry?.rel_alt !== undefined
         ? telemetry.rel_alt < NEAR_GROUND_M
         : false;
     const text = `${command.text} ${MISSION_WARNING}${nearGround ? NEAR_GROUND_WARNING : ""}`;

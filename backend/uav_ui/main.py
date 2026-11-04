@@ -216,8 +216,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else:
             result = await session.bridge.run_command(name, args)
 
-        level = "info" if result.get("status") in ("ok", "accepted") else "warn"
-        session.add_event(level, "GUI", f"{command['label']}: {result.get('status')}")
+        # A service can answer and still refuse, and then "ok" in the log would be a lie.
+        reply = result.get("result")
+        refused = isinstance(reply, dict) and reply.get("success") is False
+        done = result.get("status") in ("ok", "accepted") and not refused
+        outcome = "odmowa" if refused else result.get("status")
+        session.add_event("info" if done else "warn", "GUI", f"{command['label']}: {outcome}")
         return result
 
     @app.post("/api/actions/{action_id}/cancel")

@@ -103,6 +103,7 @@ export interface CommandSpec {
 export interface WidgetSpec {
   type: "button" | "form" | "value" | "gauge" | "chart" | "status" | "table" | "events" | "image";
   label?: string;
+  submit_label?: string;
   command?: string;
   args?: Record<string, unknown>;
   state?: string;

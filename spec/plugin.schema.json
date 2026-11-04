@@ -229,6 +229,7 @@
       "properties": {
         "type": {"enum": ["button", "form", "value", "gauge", "chart", "status", "table", "events", "image"]},
         "label": {"type": "string"},
+        "submit_label": {"type": "string"},
         "command": {"type": "string"},
         "args": {"type": "object"},
         "state": {"type": "string"},
