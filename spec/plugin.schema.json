@@ -32,7 +32,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "type": {"enum": ["number", "integer", "boolean", "enum", "string", "point", "points"]},
+        "type": {"enum": ["number", "integer", "boolean", "enum", "enums", "string", "point", "points"]},
         "label": {"type": "string"},
         "default": {},
         "min": {"type": "number"},
@@ -183,6 +183,7 @@
             "type": {"type": "string"},
             "file": {"type": "string"},
             "path": {"type": "string"},
+            "as": {"const": "path"},
             "at": {"const": "vehicle"},
             "frame": {"enum": ["ned", "enu"]},
             "lat": {"type": "string"},
@@ -248,7 +249,8 @@
         "id": {"type": "string"},
         "kind": {"enum": ["point", "path"]},
         "label": {"type": "string"},
-        "command": {"type": "string"}
+        "command": {"type": "string"},
+        "load_layer": {"type": "string"}
       }
     }
   }

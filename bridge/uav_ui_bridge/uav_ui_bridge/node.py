@@ -2,6 +2,7 @@
 """uav_ui_bridge: exposes what a plugin file declares, and nothing else, over HTTP."""
 
 import collections
+import os
 import re
 import threading
 import time
@@ -101,6 +102,7 @@ class BridgeNode(Node):
         self.clients_by_command = {}
         self.unavailable = {"commands": {}, "state": {}, "layers": {}, "images": {}}
         self.subscriptions_keep = []
+        self.file_layers = []
         self.topic_handlers = collections.defaultdict(list)
         self.topic_specs = {}
 
@@ -116,6 +118,8 @@ class BridgeNode(Node):
         self._create_topic_subscriptions()
 
         self.image_timer = self.create_timer(2.0, self._drop_idle_images, callback_group=self.group)
+        self._reload_changed_files()
+        self.file_timer = self.create_timer(1.0, self._reload_changed_files, callback_group=self.group)
         self.get_logger().info(
             f"Plugin {self.plugin['id']} {self.plugin.get('version', '?')}: "
             f"{len(self.plugin.get('commands') or {})} commands, "
@@ -340,12 +344,8 @@ class BridgeNode(Node):
 
         if "file" in source:
             path = resolve_file(source["file"], self.plugin["_vars"])
-            with open(path, encoding="utf-8") as handle:
-                data = yaml.safe_load(handle)
-            for marker in geo.markers_from_file(data, source):
-                self._store_object(
-                    layer_id, marker["key"], {**marker, "kind": "marker"}, min_interval_s=0.0
-                )
+            self._load_file_layer(layer_id, source, path)
+            self.file_layers.append({"id": layer_id, "source": source, "path": path})
             return
 
         at_vehicle = source.get("at") == "vehicle"
@@ -391,6 +391,35 @@ class BridgeNode(Node):
             self._store_object(layer_id, key, obj, min_interval)
 
         self._subscribe(source, on_message)
+
+    def _load_file_layer(self, layer_id, source, path):
+        with open(path, encoding="utf-8") as handle:
+            data = yaml.safe_load(handle) or {}
+        if source.get("as") == "path":
+            points = geo.path_from_file(data, source)
+            self._store_object(
+                layer_id, layer_id, {"key": layer_id, "kind": "path", "points": points}, 0.0
+            )
+            return
+        for marker in geo.markers_from_file(data, source):
+            self._store_object(layer_id, marker["key"], {**marker, "kind": "marker"}, 0.0)
+
+    def _reload_changed_files(self):
+        """Files can change while running, also from the plugin's own commands: the map follows."""
+        for layer in self.file_layers:
+            try:
+                changed = os.stat(layer["path"]).st_mtime_ns
+                if changed == layer.get("mtime"):
+                    continue
+                first = "mtime" not in layer
+                layer["mtime"] = changed
+                if not first:
+                    self._load_file_layer(layer["id"], layer["source"], layer["path"])
+            except (OSError, KeyError, ValueError, TypeError, PluginError, yaml.YAMLError) as exc:
+                self.get_logger().warn(
+                    f"Layer {layer['id']}: cannot read {layer['path']}: {exc}",
+                    throttle_duration_sec=30.0,
+                )
 
     def _store_object(self, layer_id, key, obj, min_interval_s):
         now = time.time()

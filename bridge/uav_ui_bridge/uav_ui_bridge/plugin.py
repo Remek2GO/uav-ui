@@ -114,6 +114,12 @@ def validate_args(command, args):
         elif kind == "enum":
             if value not in spec.get("values", []):
                 raise ArgError(f"{name}: must be one of {spec.get('values', [])}")
+        elif kind == "enums":
+            if not isinstance(value, list):
+                raise ArgError(f"{name}: expected a list")
+            wrong = [item for item in value if item not in spec.get("values", [])]
+            if wrong:
+                raise ArgError(f"{name}: must be from {spec.get('values', [])}")
         elif kind == "string":
             if not isinstance(value, str):
                 raise ArgError(f"{name}: expected text")

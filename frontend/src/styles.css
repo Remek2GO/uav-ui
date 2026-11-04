@@ -235,6 +235,9 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 .field { display: flex; flex-direction: column; gap: 2px; }
 .field > span { color: var(--muted); font-size: 13px; }
 .field.check { flex-direction: row; align-items: center; gap: 7px; }
+.choices { flex-direction: row; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 0; border: 0; }
+.choices legend { padding: 0; margin-bottom: 2px; color: var(--muted); font-size: 13px; }
+.choices .check { display: flex; align-items: center; gap: 5px; }
 
 .result { padding: 3px 8px; border-left: 3px solid; font-size: 13px; overflow-wrap: anywhere; }
 .result.ok { border-color: var(--go); color: var(--go); }
@@ -325,6 +328,7 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
   border: 1px solid var(--muted);
 }
 .card-title { display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+.tool-action { display: flex; flex-direction: column; gap: 6px; padding-top: 8px; border-top: 1px solid var(--line); }
 .draft-points { display: flex; flex-direction: column; gap: 4px; }
 .draft-point { display: flex; align-items: center; gap: 6px; }
 .draft-point > span { flex: 1; min-width: 0; }

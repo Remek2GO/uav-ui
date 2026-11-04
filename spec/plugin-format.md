@@ -54,7 +54,7 @@ commands:
 
 Komend MAVLink, które uzbrajają, startują, zmieniają tryb lub restartują autopilota, nie da się zadeklarować. Plugin z taką komendą zostanie odrzucony.
 
-**Typy argumentów:** `number`, `integer`, `boolean`, `enum` (z `values`), `string`, `points`. Nadmiarowe argumenty i wartości spoza zakresu są odrzucane na dronie.
+**Typy argumentów:** `number`, `integer`, `boolean`, `enum` (z `values`), `enums` (kilka z `values`, jako lista), `string`, `points`. Nadmiarowe argumenty i wartości spoza zakresu są odrzucane na dronie.
 
 **Pola wiadomości** (`fields`):
 
@@ -114,7 +114,8 @@ map:
 | `geometry_msgs/PoseArray`, `nav_msgs/Path` | Ścieżka. Wymaga `frame` oraz `map.origin` |
 | Dowolna wiadomość z `lat`, `lon` (i `alt`) | Wskazujesz pola |
 | Dowolna wiadomość z `at: vehicle` | Obiekt w pozycji drona z chwili odebrania, oznaczony jako przybliżony. Wymaga `map.vehicle` |
-| `file: $zmienna`, `path: a.b.c`, `lat`, `lon` | Stałe punkty z pliku YAML na dronie |
+| `file: $zmienna`, `path: a.b.c`, `lat`, `lon` | Punkty z pliku YAML na dronie. Mapa odświeża się, gdy plik się zmieni |
+| To samo z `as: path` | Lista z pliku jako jedna ścieżka |
 
 Pola wspólne: `key` (wiele obiektów na warstwie, np. `color`), `label`, `color`, `min_interval_s`, `qos`.
 
@@ -153,7 +154,8 @@ ui:
 ```
 
 - **`button`** wysyła od razu, z ustalonymi `args`. **`form`** pokazuje pola.
-- **`map_tools`:** komenda dostaje `lat`, `lon`, `alt` (`kind: point`) albo `points` (`kind: path`). Zapis lokalny działa też bez komendy.
+- **`map_tools`:** komenda dostaje `lat`, `lon` i `alt`, jeśli je deklaruje (`kind: point`), albo `points` (`kind: path`). Pozostałe jej argumenty GUI pokazuje jako pola obok przycisku, a narzędzi jednego rodzaju może być kilka. `load_layer` dodaje przycisk, który wczytuje ścieżkę z tej warstwy do edycji. Zapis lokalny działa też bez komendy.
+- **Serwis:** gdy odpowiedź ma pole `success`, GUI pokazuje jego wartość i `message`, więc odmowa wygląda jak odmowa.
 - **Panel własny:** patrz [custom-panel-api.md](custom-panel-api.md).
 
 ## Na dronie

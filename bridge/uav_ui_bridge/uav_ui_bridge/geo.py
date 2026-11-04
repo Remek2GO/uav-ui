@@ -106,6 +106,21 @@ def extract_points(msg, source, origin=None):
     raise PluginError(f"type {source['type']} needs explicit lat and lon fields")
 
 
+def path_from_file(data, source):
+    """Reads a route from a parsed YAML file: a list of entries becomes one path."""
+    entries = get_path(data, source["path"]) or []
+    if not isinstance(entries, list):
+        raise PluginError(f"{source['path']} is not a list")
+    points = []
+    for entry in entries:
+        lat = float(get_path(entry, source.get("lat", "lat")))
+        lon = float(get_path(entry, source.get("lon", "lon")))
+        alt = float(get_path(entry, source["alt"])) if "alt" in source else 0.0
+        if valid_coordinates(lat, lon):
+            points.append([lat, lon, alt])
+    return points
+
+
 def markers_from_file(data, source):
     """Reads static markers from a parsed YAML file. Entries are found by a dotted path."""
     entries = get_path(data, source["path"])

@@ -82,7 +82,7 @@ export interface Status {
 }
 
 export interface ValueSpec {
-  type?: "number" | "integer" | "boolean" | "enum" | "string" | "point" | "points";
+  type?: "number" | "integer" | "boolean" | "enum" | "enums" | "string" | "point" | "points";
   label?: string;
   default?: unknown;
   min?: number;
@@ -128,6 +128,7 @@ export interface MapToolSpec {
   kind: "point" | "path";
   label: string;
   command?: string;
+  load_layer?: string;
 }
 
 export interface LayerSpec {

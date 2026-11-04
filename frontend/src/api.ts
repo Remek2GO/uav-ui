@@ -100,6 +100,11 @@ export function describeResult(result: CommandResult): string {
   if (result.subscribers !== undefined) parts.push(`odbiorców: ${result.subscribers}`);
   if (result.duplicate) parts.push("powtórzenie, nie wykonano ponownie");
   if (result.error) parts.push(result.error);
+  const reply = result.result as { message?: unknown } | undefined;
+  if (typeof reply?.message === "string" && reply.message) {
+    // A service that explains itself: its message says more than "done" would.
+    return reply.message;
+  }
   if (result.result !== undefined) parts.push(JSON.stringify(result.result));
   const [first, ...rest] = parts;
   const sentence = first.charAt(0).toUpperCase() + first.slice(1);
@@ -107,5 +112,7 @@ export function describeResult(result: CommandResult): string {
 }
 
 export function isSuccess(result: CommandResult): boolean {
+  const reply = result.result as { success?: unknown } | undefined;
+  if (reply?.success === false) return false;
   return result.status === "ok" || result.status === "accepted";
 }

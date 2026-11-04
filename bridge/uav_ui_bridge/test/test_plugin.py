@@ -49,6 +49,22 @@ def test_points_are_validated_and_altitude_defaults_to_zero():
             validate_args(spec, {"points": bad})
 
 
+def test_enums_take_a_list_of_allowed_values():
+    spec = command(colors={"type": "enums", "values": ["red", "blue"], "default": []})
+    assert validate_args(spec, {}) == {"colors": []}
+    assert validate_args(spec, {"colors": ["red", "blue"]}) == {"colors": ["red", "blue"]}
+    for bad in (["green"], "red", ["red", 1]):
+        with pytest.raises(ArgError):
+            validate_args(spec, {"colors": bad})
+
+
+def test_path_from_file_makes_a_route():
+    data = {"waypoints": [{"lat": 54.0, "lon": 22.0, "alt": 10.0}, {"lat": 54.1, "lon": 22.1, "alt": 5}]}
+    source = {"path": "waypoints", "lat": "lat", "lon": "lon", "alt": "alt"}
+    assert geo.path_from_file(data, source) == [[54.0, 22.0, 10.0], [54.1, 22.1, 5.0]]
+    assert geo.path_from_file({"waypoints": []}, source) == []
+
+
 def test_render_fields_nests_dotted_names():
     rendered = render_fields({"header.frame_id": "map", "pose.x": "$a", "n": 2}, {"a": 1.5})
     assert rendered == {"header": {"frame_id": "map"}, "pose": {"x": 1.5}, "n": 2}

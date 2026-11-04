@@ -89,6 +89,7 @@ function initialValue(spec: ValueSpec, config: Record<string, unknown>): unknown
   if (preset !== undefined) return preset;
   if (spec.type === "enum") return spec.values?.[0];
   if (spec.type === "boolean") return false;
+  if (spec.type === "enums") return [];
   return "";
 }
 
@@ -104,6 +105,30 @@ export function ValueInput({
   name: string;
 }) {
   const label = spec.label ?? name;
+  if (spec.type === "enums") {
+    const selected = Array.isArray(value) ? (value as unknown[]) : [];
+    return (
+      <fieldset className="field choices">
+        <legend>{label}</legend>
+        {(spec.values ?? []).map((option) => (
+          <label key={String(option)} className="check">
+            <input
+              type="checkbox"
+              checked={selected.includes(option)}
+              onChange={(event) =>
+                onChange(
+                  event.target.checked
+                    ? [...selected, option]
+                    : selected.filter((item) => item !== option),
+                )
+              }
+            />
+            {String(option)}
+          </label>
+        ))}
+      </fieldset>
+    );
+  }
   if (spec.type === "boolean") {
     return (
       <label className="field check">
@@ -121,6 +146,7 @@ export function ValueInput({
       <label className="field">
         <span>{label}</span>
         <select value={String(value ?? "")} onChange={(event) => onChange(event.target.value)}>
+          {(value === "" || value === undefined) && <option value="">wybierz</option>}
           {(spec.values ?? []).map((option) => (
             <option key={String(option)} value={String(option)}>
               {String(option)}

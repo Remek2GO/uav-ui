@@ -4,6 +4,7 @@ import { api, ApiError, describeResult, isSuccess, PrefetchJob } from "../api";
 import { runPluginCommand } from "../commands";
 import { useStore } from "../store";
 import type { CommandResult, MapObject, MapSource, MapToolSpec, Plan, Plugin } from "../types";
+import { ValueInput } from "../widgets";
 import { hasPendingMapClick, subscribeMapClick, takeMapClick } from "./mapClick";
 
 const DEFAULT_CENTER: [number, number] = [19.9172, 50.0598];
@@ -135,6 +136,7 @@ export function MapPanel() {
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [prefetch, setPrefetch] = useState<PrefetchJob | null>(null);
   const [waitingForPanelClick, setWaitingForPanelClick] = useState(false);
+  const [toolArgs, setToolArgs] = useState<Record<string, Record<string, unknown>>>({});
 
   const telemetry = useStore((s) => s.telemetry);
   const bridgeCommands = useStore((s) => s.status.bridge?.info?.commands);
@@ -468,8 +470,8 @@ export function MapPanel() {
     setDraft({ kind, points: [] });
   };
 
-  const toolFor = (kind: DraftKind): MapToolSpec | undefined =>
-    plugin?.ui?.map_tools?.find((tool) => tool.kind === kind && tool.command);
+  const toolsFor = (kind: DraftKind): MapToolSpec[] =>
+    plugin?.ui?.map_tools?.filter((tool) => tool.kind === kind && tool.command) ?? [];
 
   const savePlan = async () => {
     if (!draft || !draft.points.length || !planName.trim()) return;
@@ -483,17 +485,32 @@ export function MapPanel() {
     }
   };
 
-  const sendDraft = async () => {
-    if (!draft || !plugin) return;
-    const tool = toolFor(draft.kind);
-    if (!tool?.command) return;
-    const args =
+  const sendDraft = async (tool: MapToolSpec) => {
+    if (!draft || !plugin || !tool.command) return;
+    const specs = plugin.commands?.[tool.command]?.args ?? {};
+    const position =
       draft.kind === "point"
         ? { lat: draft.points[0].lat, lon: draft.points[0].lon, alt: draft.points[0].alt }
         : { points: draft.points };
+    const args: Record<string, unknown> = { ...(toolArgs[tool.id] ?? {}) };
+    for (const [name, value] of Object.entries(position)) {
+      if (name in specs) args[name] = value;
+    }
     const result: CommandResult = await runPluginCommand(plugin, tool.command, args);
     if (result.status === "cancelled") return;
     setMessage({ ok: isSuccess(result), text: describeResult(result) });
+  };
+
+  const loadFromLayer = (layer: string) => {
+    const route = allObjects.find((o) => o.layer === layer && o.kind === "path");
+    if (!route?.points?.length) {
+      setMessage({ ok: false, text: "Na dronie nie ma jeszcze tej trasy." });
+      return;
+    }
+    setDraft({
+      kind: "path",
+      points: route.points.map(([lat, lon, alt]) => ({ lat, lon, alt })),
+    });
   };
 
   const deletePlan = async (name: string) => {
@@ -535,10 +552,13 @@ export function MapPanel() {
   };
 
   const currentSource = sources.find((s) => s.id === sourceId);
-  const sendTool = draft ? toolFor(draft.kind) : undefined;
-  const sendUnavailable = sendTool?.command
-    ? bridgeCommands?.[sendTool.command]?.available === false
-    : false;
+  const draftTools = draft ? toolsFor(draft.kind) : [];
+  const positionArgs = ["lat", "lon", "alt", "points"];
+  const showAltitude =
+    draft?.kind === "path" ||
+    draftTools.length === 0 ||
+    draftTools.some((tool) => "alt" in (plugin?.commands?.[tool.command!]?.args ?? {}));
+  const layerToLoad = draftTools.find((tool) => tool.load_layer)?.load_layer;
 
   return (
     <div className="map-panel">
@@ -628,29 +648,34 @@ export function MapPanel() {
                 : "Klikaj na mapie, żeby dodawać kolejne punkty. Punkty można przeciągać."}
             </div>
           )}
+          {layerToLoad && (
+            <button onClick={() => loadFromLayer(layerToLoad)}>Wczytaj trasę z drona</button>
+          )}
           <div className="draft-points">
             {draft.points.map((point, index) => (
               <div className="draft-point" key={index}>
                 <span className="mono small-text">
                   {index + 1}. {point.lat.toFixed(6)}, {point.lon.toFixed(6)}
                 </span>
-                <label>
-                  <span className="sr-only">Wysokość punktu {index + 1}</span>
-                  <input
-                    type="number"
-                    value={point.alt}
-                    step="any"
-                    onChange={(event) =>
-                      setDraft({
-                        ...draft,
-                        points: draft.points.map((p, i) =>
-                          i === index ? { ...p, alt: Number(event.target.value) } : p,
-                        ),
-                      })
-                    }
-                  />
-                  m
-                </label>
+                {showAltitude && (
+                  <label>
+                    <span className="sr-only">Wysokość punktu {index + 1}</span>
+                    <input
+                      type="number"
+                      value={point.alt}
+                      step="any"
+                      onChange={(event) =>
+                        setDraft({
+                          ...draft,
+                          points: draft.points.map((p, i) =>
+                            i === index ? { ...p, alt: Number(event.target.value) } : p,
+                          ),
+                        })
+                      }
+                    />
+                    m
+                  </label>
+                )}
                 <button
                   className="small"
                   aria-label={`Usuń punkt ${index + 1}`}
@@ -676,22 +701,48 @@ export function MapPanel() {
                   Zapisz {plugin ? `w ${plugin.name}` : "lokalnie"}
                 </button>
               </div>
-              {sendTool ? (
-                <>
-                  <button
-                    className="primary"
-                    disabled={sendUnavailable}
-                    onClick={() => void sendDraft()}
-                  >
-                    Wyślij do drona
-                  </button>
-                  {sendUnavailable && (
-                    <div className="result bad">
-                      Dron nie obsługuje tej komendy: {bridgeCommands?.[sendTool.command!]?.error}. Zapis działa.
-                    </div>
-                  )}
-                </>
-              ) : (
+              {draftTools.map((tool) => {
+                const command = plugin?.commands?.[tool.command!];
+                const availability = bridgeCommands?.[tool.command!];
+                const extras = Object.entries(command?.args ?? {}).filter(
+                  ([name]) => !positionArgs.includes(name),
+                );
+                const values = toolArgs[tool.id] ?? {};
+                const incomplete = extras.some(
+                  ([name]) => values[name] === undefined || values[name] === "",
+                );
+                return (
+                  <div className="tool-action" key={tool.id}>
+                    {extras.map(([name, spec]) => (
+                      <ValueInput
+                        key={name}
+                        name={name}
+                        spec={{ ...spec, values: spec.values }}
+                        value={values[name] ?? ""}
+                        onChange={(value) =>
+                          setToolArgs((current) => ({
+                            ...current,
+                            [tool.id]: { ...current[tool.id], [name]: value },
+                          }))
+                        }
+                      />
+                    ))}
+                    <button
+                      className="primary"
+                      disabled={availability?.available === false || incomplete}
+                      onClick={() => void sendDraft(tool)}
+                    >
+                      {tool.label}
+                    </button>
+                    {availability?.available === false && (
+                      <div className="result bad">
+                        Dron nie obsługuje tej komendy: {availability.error}.
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              {draftTools.length === 0 && (
                 <div className="muted small-text">
                   {plugin
                     ? "Ten plugin nie ma komendy dla tego narzędzia."
