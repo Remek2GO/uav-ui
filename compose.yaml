@@ -1,0 +1,28 @@
+# GUI: http://127.0.0.1:8090
+# network_mode: host, bo wfb-gs wysyła obraz i MAVLink na localhost hosta, a bridge jest za interfejsem
+# tunelu. Wszystko nasłuchuje tylko na 127.0.0.1.
+services:
+  app:
+    build: .
+    image: uav-ui:latest
+    container_name: uav-ui
+    restart: unless-stopped
+    network_mode: host
+    user: "${UID:-1000}:${GID:-1000}"
+    environment:
+      # Katalogi z pluginami przy rozwoju, rozdzielane dwukropkiem, np. /plugins/hydrolab
+      UAV_UI_PLUGIN_DIRS: ${UAV_UI_PLUGIN_DIRS:-}
+    volumes:
+      - ./data:/data
+      # Odkomentuj, żeby używać pluginu z katalogu zamiast wgrywać zip:
+      # - ../hydrolab26/uav_ui_plugin:/plugins/hydrolab:ro
+
+  mediamtx:
+    image: bluenviron/mediamtx:1.21.3
+    container_name: uav-ui-mediamtx
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./mediamtx.yml:/mediamtx.yml:ro
+    logging:
+      options: { max-size: "1m", max-file: "2" }  # bez strumienia loguje timeout co kilkanaście sekund

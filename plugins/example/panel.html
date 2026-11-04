@@ -1,0 +1,37 @@
+<!doctype html>
+<!-- Przykład panelu własnego. API: spec/custom-panel-api.md. Wszystko musi być w tym jednym pliku. -->
+<meta charset="utf-8">
+<style>
+  body { font: 13px system-ui, sans-serif; color: #dfe5da; background: #171c19; margin: 12px; }
+  button { font: inherit; padding: 6px 10px; margin: 0 6px 6px 0; }
+  pre { white-space: pre-wrap; color: #98a59a; }
+</style>
+<p>Licznik ze stanu: <b id="counter">-</b></p>
+<button id="add">Dodaj 2 + 40 (serwis)</button>
+<button id="click">Pokaż kliknięty punkt na mapie</button>
+<pre id="log"></pre>
+<script>
+  const log = (text) => { document.getElementById('log').textContent = text; };
+  const send = (message) => parent.postMessage(message, '*');
+  let nextId = 1;
+
+  window.addEventListener('message', (event) => {
+    if (event.source !== parent) return;
+    const message = event.data;
+    if (message.type === 'state' && message.values.counter) {
+      document.getElementById('counter').textContent = message.values.counter.v;
+    } else if (message.type === 'command_result') {
+      log(JSON.stringify(message.result));
+    } else if (message.type === 'map_click') {
+      log(`Punkt: ${message.lat.toFixed(6)}, ${message.lon.toFixed(6)}`);
+      send({ type: 'set_layer', id: 'clicked', objects: [
+        { key: 'click', kind: 'marker', lat: message.lat, lon: message.lon, label: 'z panelu', color: '#ff00ff' },
+      ]});
+    }
+  });
+
+  document.getElementById('add').onclick = () =>
+    send({ type: 'command', requestId: nextId++, name: 'add', args: { a: 2, b: 40 } });
+  document.getElementById('click').onclick = () => send({ type: 'request_map_click' });
+  send({ type: 'ready' });
+</script>

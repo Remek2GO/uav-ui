@@ -1,0 +1,8 @@
+fastapi==0.115.6
+uvicorn==0.34.0
+websockets==14.1
+httpx==0.28.1
+python-multipart==0.0.20
+PyYAML==6.0.2
+jsonschema==4.23.0
+pymavlink==2.4.42

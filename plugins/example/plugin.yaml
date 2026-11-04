@@ -1,0 +1,238 @@
+# Przykład wszystkich możliwości pluginu. Opis pól: spec/plugin-format.md
+# Test bez drona: bridge/uav_ui_bridge/test/run_example.sh uruchamia wszystko, czego ten plik potrzebuje.
+api: 1
+id: example
+name: Przykład
+version: 0.1.0
+description: Pokazuje widgety, komendy, warstwy mapy i panel własny.
+
+config:
+  default_note:
+    type: string
+    label: Domyślna notatka
+    default: test
+  default_a:
+    type: integer
+    label: Domyślne a
+    default: 2
+    min: 0
+    max: 100
+
+commands:
+  say:
+    label: Wyślij tekst
+    args:
+      text: {type: string, label: Tekst, default: $config.default_note}
+    ros:
+      topic: /example/say
+      type: std_msgs/String
+      fields: {data: $text}
+
+  latched:
+    label: Komenda jednorazowa
+    description: Publisher istnieje tylko na czas komendy.
+    confirm: Czy na pewno wysłać?
+    args:
+      color: {type: enum, label: Kolor, values: [red, green, blue]}
+    ros:
+      topic: /example/latched
+      type: std_msgs/String
+      fields: {data: $color}
+      qos: {durability: transient_local, depth: 1}
+      oneshot: true
+
+  add:
+    label: Dodaj (serwis)
+    args:
+      a: {type: integer, label: a, default: $config.default_a}
+      b: {type: integer, label: b, default: 3}
+    ros:
+      service: /example/add
+      type: example_interfaces/AddTwoInts
+      fields: {a: $a, b: $b}
+
+  fibonacci:
+    label: Fibonacci (akcja)
+    args:
+      order: {type: integer, label: Rząd, default: 6, min: 1, max: 20}
+    ros:
+      action: /example/fibonacci
+      type: example_interfaces/Fibonacci
+      fields: {order: $order}
+
+  custom_message:
+    label: Własna wiadomość z zagnieżdżeniem
+    args:
+      x: {type: number, label: x, default: 1.5}
+    ros:
+      topic: /example/pose
+      type: geometry_msgs/PoseStamped
+      fields:
+        header.stamp: $now
+        header.frame_id: map
+        pose.position.x: $x
+        pose.orientation.w: 1.0
+
+  send_point:
+    label: Wyślij punkt
+    args:
+      lat: {type: number, min: -90, max: 90}
+      lon: {type: number, min: -180, max: 180}
+      alt: {type: number, default: 10}
+    ros:
+      topic: /example/goal
+      type: sensor_msgs/NavSatFix
+      fields:
+        header.stamp: $now
+        latitude: $lat
+        longitude: $lon
+        altitude: $alt
+
+  send_path:
+    label: Wyślij ścieżkę
+    args:
+      points: {type: points}
+    ros:
+      topic: /example/waypoints
+      type: geographic_msgs/GeoPath
+      qos: {durability: transient_local, depth: 1}
+      fields:
+        header.stamp: $now
+        poses:
+          $each: $points
+          item:
+            pose.position.latitude: $lat
+            pose.position.longitude: $lon
+            pose.position.altitude: $alt
+
+  send_local_path:
+    label: Lista punktów w standardowej wiadomości
+    args:
+      points: {type: points}
+    ros:
+      topic: /example/local_waypoints
+      type: nav_msgs/Path
+      fields:
+        header.stamp: $now
+        header.frame_id: wgs84
+        poses:
+          $each: $points
+          item:
+            pose.position.x: $lat
+            pose.position.y: $lon
+            pose.position.z: $alt
+
+  beep_motors:
+    label: Komenda MAVLink
+    description: Wysyłana przez backend. Uzbrajanie, zmiana trybu i start są zablokowane.
+    confirm: true
+    mavlink:
+      command: 203  # MAV_CMD_DO_DIGICAM_CONTROL
+      params: [0, 0, 0, 0, 1, 0, 0]
+
+state:
+  counter: {topic: /example/counter, type: std_msgs/Int32, label: Licznik}
+  temperature: {topic: /example/sensors, type: std_msgs/Float32MultiArray, field: "data[0]", label: Temperatura, unit: °C, precision: 2}
+  ph: {topic: /example/sensors, type: std_msgs/Float32MultiArray, field: "data[1]", label: pH, precision: 2}
+  active: {topic: /example/active, type: std_msgs/Bool, label: Aktywny}
+
+events:
+  rosout:
+    min_level: info
+    nodes: [example_world]
+  topics:
+    - topic: /example/found
+      type: std_msgs/String
+      level: warn
+      source: wykrywanie
+      text: "Znaleziono: {data}"
+
+images:
+  camera:
+    topic: /example/image
+    type: sensor_msgs/Image
+    max_hz: 1
+    max_width: 320
+    quality: 50
+
+map:
+  origin:
+    topic: /example/origin
+    type: sensor_msgs/NavSatFix
+    lat: latitude
+    lon: longitude
+    alt: altitude
+  vehicle:
+    topic: /example/vehicle
+    type: sensor_msgs/NavSatFix
+    lat: latitude
+    lon: longitude
+    alt: altitude
+  layers:
+    - id: navsat
+      label: NavSatFix
+      source: {topic: /example/navsat, type: sensor_msgs/NavSatFix, key: header.frame_id, label: header.frame_id}
+      style: {color: "#3fb950"}
+    - id: geopoint
+      label: GeoPointStamped
+      source: {topic: /example/geopoint, type: geographic_msgs/GeoPointStamped}
+      style: {color: "#a78bfa"}
+    - id: geopath
+      label: GeoPath
+      source: {topic: /example/geopath, type: geographic_msgs/GeoPath}
+      style: {color: "#d29922"}
+    - id: local_pose
+      label: PoseStamped (NED)
+      source: {topic: /example/local_pose, type: geometry_msgs/PoseStamped, frame: ned}
+      style: {color: "#3b8bff"}
+    - id: local_path
+      label: Path (ENU)
+      source: {topic: /example/local_path, type: nav_msgs/Path, frame: enu}
+      style: {color: "#f85149"}
+    - id: pose_array
+      label: PoseArray (NED)
+      source: {topic: /example/pose_array, type: geometry_msgs/PoseArray, frame: ned}
+      style: {color: "#ec6cb9"}
+    - id: at_vehicle
+      label: Obiekt w pozycji drona
+      source: {topic: /example/found, type: std_msgs/String, at: vehicle, key: data, label: data}
+      style: {color: "#ffffff"}
+    - id: from_fields
+      label: Dowolna wiadomość (mapowanie pól)
+      source: {topic: /example/any, type: geometry_msgs/Point, lat: x, lon: y, alt: z}
+      style: {color: "#00d0d0"}
+    - id: from_file
+      label: Z pliku
+      source: {file: $markers_file, path: places, lat: lat, lon: lon, key: name, label: name, color: color}
+
+ui:
+  panels:
+    - id: controls
+      title: Sterowanie
+      widgets:
+        - {type: form, command: say}
+        - {type: button, command: latched, label: Czerwony, args: {color: red}}
+        - {type: button, command: latched, label: Zielony, args: {color: green}}
+        - {type: form, command: add}
+        - {type: form, command: fibonacci}
+        - {type: form, command: custom_message}
+    - id: data
+      title: Dane
+      widgets:
+        - {type: value, state: counter}
+        - {type: status, state: active, on_text: Działa, off_text: Stop}
+        - {type: gauge, state: temperature, min: 0, max: 40}
+        - {type: table, states: [temperature, ph, counter]}
+        - {type: chart, states: [temperature, ph], window_s: 120}
+        - {type: image, image: camera}
+    - id: log
+      title: Zdarzenia pluginu
+      widgets:
+        - {type: events}
+    - id: custom
+      title: Panel własny
+      type: custom
+      entry: panel.html
+  map_tools:
+    - {id: point, kind: point, label: Punkt, command: send_point}
+    - {id: path, kind: path, label: Ścieżka, command: send_path}

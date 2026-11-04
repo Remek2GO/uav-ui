@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>uav_ui_bridge</name>
+  <version>0.1.0</version>
+  <description>HTTP bridge between uav-ui and a local ROS 2 graph. Exposes only what a plugin file declares.</description>
+  <maintainer email="remik103@op.pl">Remek2GO</maintainer>
+  <license>Apache-2.0</license>
+
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>rosidl_runtime_py</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+
+  <test_depend>python3-pytest</test_depend>
+
+  <export>
+    <build_type>ament_python</build_type>
+  </export>
+</package>

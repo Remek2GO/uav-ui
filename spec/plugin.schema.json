@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "uav-ui plugin",
+  "type": "object",
+  "required": ["api", "id", "name"],
+  "additionalProperties": false,
+  "properties": {
+    "api": {"const": 1},
+    "id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9_-]{0,63}$"},
+    "name": {"type": "string", "minLength": 1},
+    "version": {"type": "string"},
+    "description": {"type": "string"},
+    "config": {"type": "object", "additionalProperties": {"$ref": "#/$defs/value_spec"}},
+    "commands": {"type": "object", "additionalProperties": {"$ref": "#/$defs/command"}},
+    "state": {"type": "object", "additionalProperties": {"$ref": "#/$defs/state"}},
+    "events": {"$ref": "#/$defs/events"},
+    "images": {"type": "object", "additionalProperties": {"$ref": "#/$defs/image"}},
+    "map": {"$ref": "#/$defs/map"},
+    "ui": {"$ref": "#/$defs/ui"}
+  },
+  "$defs": {
+    "qos": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "reliability": {"enum": ["reliable", "best_effort"]},
+        "durability": {"enum": ["volatile", "transient_local"]},
+        "depth": {"type": "integer", "minimum": 1}
+      }
+    },
+    "value_spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "type": {"enum": ["number", "integer", "boolean", "enum", "string", "point", "points"]},
+        "label": {"type": "string"},
+        "default": {},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "max_length": {"type": "integer"},
+        "values": {"type": "array", "items": {"type": ["string", "number"]}},
+        "unit": {"type": "string"}
+      }
+    },
+    "command": {
+      "type": "object",
+      "required": ["label"],
+      "additionalProperties": false,
+      "properties": {
+        "label": {"type": "string"},
+        "description": {"type": "string"},
+        "confirm": {"type": ["boolean", "string"]},
+        "args": {"type": "object", "additionalProperties": {"$ref": "#/$defs/value_spec"}},
+        "ros": {"$ref": "#/$defs/ros_command"},
+        "mavlink": {"$ref": "#/$defs/mavlink_command"}
+      },
+      "oneOf": [{"required": ["ros"]}, {"required": ["mavlink"]}]
+    },
+    "ros_command": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": {"type": "string"},
+        "service": {"type": "string"},
+        "action": {"type": "string"},
+        "type": {"type": "string"},
+        "fields": {"type": "object"},
+        "qos": {"$ref": "#/$defs/qos"},
+        "oneshot": {"type": "boolean"}
+      },
+      "oneOf": [{"required": ["topic"]}, {"required": ["service"]}, {"required": ["action"]}]
+    },
+    "mavlink_command": {
+      "type": "object",
+      "required": ["command"],
+      "additionalProperties": false,
+      "properties": {
+        "command": {"type": "integer", "minimum": 0},
+        "params": {"type": "array", "maxItems": 7}
+      }
+    },
+    "state": {
+      "type": "object",
+      "required": ["topic", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": {"type": "string"},
+        "type": {"type": "string"},
+        "field": {"type": "string"},
+        "label": {"type": "string"},
+        "unit": {"type": "string"},
+        "precision": {"type": "integer", "minimum": 0, "maximum": 9},
+        "qos": {"$ref": "#/$defs/qos"}
+      }
+    },
+    "events": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rosout": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "min_level": {"enum": ["debug", "info", "warn", "error", "fatal"]},
+            "nodes": {"type": "array", "items": {"type": "string"}},
+            "exclude_nodes": {"type": "array", "items": {"type": "string"}},
+            "max_per_s": {"type": "number", "exclusiveMinimum": 0}
+          }
+        },
+        "topics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["topic", "type", "text"],
+            "additionalProperties": false,
+            "properties": {
+              "topic": {"type": "string"},
+              "type": {"type": "string"},
+              "text": {"type": "string"},
+              "level": {"enum": ["debug", "info", "warn", "error", "fatal"]},
+              "source": {"type": "string"},
+              "min_interval_s": {"type": "number", "minimum": 0},
+              "qos": {"$ref": "#/$defs/qos"}
+            }
+          }
+        }
+      }
+    },
+    "image": {
+      "type": "object",
+      "required": ["topic", "type"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": {"type": "string"},
+        "type": {"enum": ["sensor_msgs/Image", "sensor_msgs/CompressedImage", "sensor_msgs/msg/Image", "sensor_msgs/msg/CompressedImage"]},
+        "label": {"type": "string"},
+        "max_hz": {"type": "number", "exclusiveMinimum": 0, "maximum": 2},
+        "max_width": {"type": "integer", "minimum": 32, "maximum": 1280},
+        "quality": {"type": "integer", "minimum": 10, "maximum": 90},
+        "qos": {"$ref": "#/$defs/qos"}
+      }
+    },
+    "map": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "origin": {"$ref": "#/$defs/position_source"},
+        "vehicle": {"$ref": "#/$defs/position_source"},
+        "layers": {"type": "array", "items": {"$ref": "#/$defs/layer"}}
+      }
+    },
+    "position_source": {
+      "type": "object",
+      "required": ["topic", "type", "lat", "lon"],
+      "additionalProperties": false,
+      "properties": {
+        "topic": {"type": "string"},
+        "type": {"type": "string"},
+        "lat": {"type": "string"},
+        "lon": {"type": "string"},
+        "alt": {"type": "string"},
+        "qos": {"$ref": "#/$defs/qos"}
+      }
+    },
+    "layer": {
+      "type": "object",
+      "required": ["id", "source"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "label": {"type": "string"},
+        "style": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {"color": {"type": "string"}, "icon": {"type": "string"}}
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "topic": {"type": "string"},
+            "type": {"type": "string"},
+            "file": {"type": "string"},
+            "path": {"type": "string"},
+            "at": {"const": "vehicle"},
+            "frame": {"enum": ["ned", "enu"]},
+            "lat": {"type": "string"},
+            "lon": {"type": "string"},
+            "alt": {"type": "string"},
+            "key": {"type": "string"},
+            "label": {"type": "string"},
+            "color": {"type": "string"},
+            "min_interval_s": {"type": "number", "minimum": 0},
+            "qos": {"$ref": "#/$defs/qos"}
+          },
+          "oneOf": [
+            {"required": ["topic", "type"]},
+            {"required": ["file", "path"]}
+          ]
+        }
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "panels": {"type": "array", "items": {"$ref": "#/$defs/panel"}},
+        "map_tools": {"type": "array", "items": {"$ref": "#/$defs/map_tool"}}
+      }
+    },
+    "panel": {
+      "type": "object",
+      "required": ["id", "title"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Za-z0-9_-]+$"},
+        "title": {"type": "string"},
+        "type": {"const": "custom"},
+        "entry": {"type": "string"},
+        "widgets": {"type": "array", "items": {"$ref": "#/$defs/widget"}}
+      }
+    },
+    "widget": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {"enum": ["button", "form", "value", "gauge", "chart", "status", "table", "events", "image"]},
+        "label": {"type": "string"},
+        "command": {"type": "string"},
+        "args": {"type": "object"},
+        "state": {"type": "string"},
+        "states": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+        "image": {"type": "string"},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "on_text": {"type": "string"},
+        "off_text": {"type": "string"},
+        "window_s": {"type": "number", "minimum": 5, "maximum": 3600}
+      }
+    },
+    "map_tool": {
+      "type": "object",
+      "required": ["id", "kind", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {"type": "string"},
+        "kind": {"enum": ["point", "path"]},
+        "label": {"type": "string"},
+        "command": {"type": "string"}
+      }
+    }
+  }
+}
