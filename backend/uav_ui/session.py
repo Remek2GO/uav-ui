@@ -18,8 +18,8 @@ TELEMETRY_PERIOD_S = 0.25
 DEFAULT_PROFILES = [
     {
         "name": "WFB (dron)",
-        "mavlink": {"listen": 14570, "forward": 14550},
-        "video": {"listen": 5610, "forward": 5600},
+        "mavlink": {"listen": 14570},
+        "video": {"listen": 5610},
         "bridge": "http://10.5.0.2:8765",
         "plugin": None,
     },

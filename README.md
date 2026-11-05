@@ -12,12 +12,14 @@ docker compose up -d --build
 
 Otwórz http://127.0.0.1:8090. Wszystko nasłuchuje tylko na `127.0.0.1`. Do działania nie jest potrzebny ROS na laptopie.
 
+Do obrazu użyj Chrome. W Firefoksie połączenie WebRTC z `127.0.0.1` nie zestawia się i obraz się nie pojawia, reszta GUI działa.
+
 ## Co czego używa
 
 ```text
 przeglądarka ── REST/WS/WHEP ─▶ backend FastAPI (127.0.0.1:8090, serwuje też frontend)
-                                 ├─ MAVLink UDP 14570 ⇄ wfb-gs, przekazywany do QGC na 14550
-                                 ├─ wideo UDP 5610 → MediaMTX (WebRTC), przekazywane do QGC na 5600
+                                 ├─ MAVLink UDP 14570 ⇄ wfb-gs
+                                 ├─ wideo UDP 5610 → MediaMTX (WebRTC)
                                  ├─ cache kafelków, plany, konfiguracja pluginów (./data)
                                  └─ HTTP przez tunel ▶ 10.5.0.2:8765 uav_ui_bridge ▶ topiki lokalne drona
 ```
@@ -32,14 +34,7 @@ przeglądarka ── REST/WS/WHEP ─▶ backend FastAPI (127.0.0.1:8090, serwuj
 
 ## Praca z dronem przez WFB
 
-Domyślny profil **WFB (dron)** wymaga, żeby `wfb-gs` wysyłał dane do GUI, a nie bezpośrednio do QGC. W `wfb-gs/.env`:
-
-```bash
-VIDEO_OUT=127.0.0.1:5610
-MAVLINK_OUT=127.0.0.1:14570
-```
-
-Po zmianie `docker compose up -d` w `wfb-gs`. GUI przekazuje dane dalej, więc QGC działa obok bez zmian w ustawieniach. **Bez uruchomionego GUI QGC nic nie dostanie.** Żeby używać samego QGC, przywróć `5600` i `14550`.
+Domyślny profil **WFB (dron)** odbiera dane z `wfb-gs` na portach `14570` i `5610`. `wfb-gs` wysyła osobną kopię do GUI i do QGC, więc można używać jednego z nich albo obu naraz, bez zmian w ustawieniach. Komendy lotu działają z obu, a dron wykonuje tę, która przyszła ostatnia.
 
 Na dronie obraz `wfb-uav` musi być przebudowany, bo blokuje porty DDS na tunelu (`TUNNEL_BLOCK_DDS`). Inaczej ROS laptopa i drona łączą się w jeden graf.
 
