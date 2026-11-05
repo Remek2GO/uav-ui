@@ -334,13 +334,13 @@ export function SettingsPanel() {
       <section>
         <h3>Pluginy</h3>
         <label className={`file-button ${busy ? "disabled" : ""}`}>
-          Wgraj plugin (plik zip)
+          Wgraj plugin (plugin.yaml albo zip)
           <input
             ref={fileInput}
             className="sr-only"
             type="file"
-            accept=".zip"
-            aria-label="Wgraj plugin w pliku zip"
+            accept=".yaml,.yml,.zip"
+            aria-label="Wgraj plugin: plugin.yaml albo zip"
             disabled={busy}
             onChange={(e) => void upload(e.target.files?.[0])}
           />

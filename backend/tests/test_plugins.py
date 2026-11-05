@@ -42,6 +42,31 @@ def test_data_folder_cleared_while_running(store):
     assert store.save_config(plugin, {}) == {}
 
 
+def test_plain_yaml_is_installed_without_a_zip(store):
+    assert store.install(MINIMAL)["id"] == "demo"
+    assert store.get("demo")["_origin"] == "uploaded"
+    assert store.install(MINIMAL + b"version: '2'\n")["id"] == "demo"
+    assert store.get("demo")["version"] == "2"
+
+
+def test_zip_still_works_through_the_same_call(store):
+    assert store.install(make_zip({"plugin.yaml": MINIMAL}))["id"] == "demo"
+
+
+@pytest.mark.parametrize("data", [b"not: [valid", b"api: 1\nid: demo\n", b"\x00\x01binary"])
+def test_bad_yaml_is_rejected_and_keeps_the_previous_version(store, data):
+    store.install(MINIMAL + b"version: '1'\n")
+    with pytest.raises(PluginValidationError):
+        store.install(data)
+    assert store.get("demo")["version"] == "1"
+
+
+def test_yaml_plugin_with_a_custom_panel_needs_a_zip(store):
+    text = MINIMAL + b"ui: {panels: [{id: p, title: P, type: custom, entry: x.html}]}\n"
+    with pytest.raises(PluginValidationError, match="missing"):
+        store.install(text)
+
+
 def test_zip_with_one_wrapping_folder(store):
     assert store.install_zip(make_zip({"demo-1.0/plugin.yaml": MINIMAL}))["id"] == "demo"
 

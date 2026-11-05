@@ -169,12 +169,28 @@ class PluginStore:
             manifest = root / "plugin.yaml"
             if not manifest.is_file():
                 raise PluginValidationError("plugin.yaml is missing from the zip")
-            plugin = self.validate(manifest.read_bytes(), root)
+            return self._install(root)
 
-            destination = self.install_dir / plugin["id"]
-            if destination.exists():
-                shutil.rmtree(destination)
-            shutil.copytree(root, destination)
+    def install_yaml(self, data: bytes) -> dict:
+        """A plugin that is a single plugin.yaml, the usual case: no zip needed."""
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp) / "plugin"
+            root.mkdir()
+            (root / "plugin.yaml").write_bytes(data)
+            return self._install(root)
+
+    def install(self, data: bytes) -> dict:
+        """A zip, or the plugin.yaml itself."""
+        if data[:4] == b"PK\x03\x04":
+            return self.install_zip(data)
+        return self.install_yaml(data)
+
+    def _install(self, root: Path) -> dict:
+        plugin = self.validate((root / "plugin.yaml").read_bytes(), root)
+        destination = self.install_dir / plugin["id"]
+        if destination.exists():
+            shutil.rmtree(destination)
+        shutil.copytree(root, destination)
         return plugin
 
     def remove(self, plugin_id) -> bool:

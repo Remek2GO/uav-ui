@@ -143,7 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         if len(data) > MAX_UNPACKED_BYTES:
             raise HTTPException(413, "plik jest za duży")
         try:
-            plugin = plugins.install_zip(data)
+            plugin = plugins.install(data)
         except PluginValidationError as exc:
             raise HTTPException(400, str(exc)) from exc
         return {"id": plugin["id"], "name": plugin["name"], "version": plugin.get("version")}

@@ -104,6 +104,12 @@ def test_plugin_upload_list_delete(client):
     assert client.delete("/api/plugins/example").status_code == 404  # directories are not deleted
 
 
+def test_plain_plugin_yaml_upload(client):
+    response = client.post("/api/plugins", files={"file": ("plugin.yaml", b"api: 1\nid: y\nname: Y\n")})
+    assert response.status_code == 200 and response.json()["id"] == "y"
+    assert any(p["id"] == "y" for p in client.get("/api/plugins").json()["plugins"])
+
+
 def test_invalid_plugin_upload_gives_a_reason(client):
     response = client.post("/api/plugins", files={"file": ("p.zip", plugin_zip("api: 1\nid: x\n"))})
     assert response.status_code == 400 and "name" in response.json()["detail"]
